@@ -132,7 +132,11 @@ export class HiringFlowValidator {
         break;
 
       case "CUSTOM_MESSAGE":
-        if (!step.config.message || step.config.message.trim() === "") {
+        if (
+          !step.config.message ||
+          (typeof step.config.message === "string" &&
+            step.config.message.trim() === "")
+        ) {
           errors.push({
             type: "config",
             message: `"${step.customName}" requires a message content.`,

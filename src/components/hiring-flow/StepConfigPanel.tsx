@@ -55,7 +55,11 @@ const StepConfigPanel: React.FC<StepConfigPanelProps> = ({
               </label>
               <input
                 type="text"
-                value={config.emailTemplateId || ""}
+                value={
+                  typeof config.emailTemplateId === "string"
+                    ? config.emailTemplateId
+                    : ""
+                }
                 onChange={(e) =>
                   handleConfigChange("emailTemplateId", e.target.value)
                 }
@@ -69,7 +73,11 @@ const StepConfigPanel: React.FC<StepConfigPanelProps> = ({
               </label>
               <input
                 type="text"
-                value={config.salaryRange || ""}
+                value={
+                  typeof config.salaryRange === "string"
+                    ? config.salaryRange
+                    : ""
+                }
                 onChange={(e) =>
                   handleConfigChange("salaryRange", e.target.value)
                 }
@@ -88,7 +96,11 @@ const StepConfigPanel: React.FC<StepConfigPanelProps> = ({
                 Verification Type
               </label>
               <select
-                value={config.verificationType || ""}
+                value={
+                  typeof config.verificationType === "string"
+                    ? config.verificationType
+                    : ""
+                }
                 onChange={(e) =>
                   handleConfigChange("verificationType", e.target.value)
                 }
@@ -107,7 +119,11 @@ const StepConfigPanel: React.FC<StepConfigPanelProps> = ({
                 Required Documents
               </label>
               <textarea
-                value={config.requiredDocuments || ""}
+                value={
+                  typeof config.requiredDocuments === "string"
+                    ? config.requiredDocuments
+                    : ""
+                }
                 onChange={(e) =>
                   handleConfigChange("requiredDocuments", e.target.value)
                 }
@@ -127,7 +143,7 @@ const StepConfigPanel: React.FC<StepConfigPanelProps> = ({
                 Message Content
               </label>
               <textarea
-                value={config.message || ""}
+                value={typeof config.message === "string" ? config.message : ""}
                 onChange={(e) => handleConfigChange("message", e.target.value)}
                 rows={4}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-gray-700 dark:text-white"
@@ -139,7 +155,11 @@ const StepConfigPanel: React.FC<StepConfigPanelProps> = ({
                 Message Type
               </label>
               <select
-                value={config.messageType || "email"}
+                value={
+                  typeof config.messageType === "string"
+                    ? config.messageType
+                    : "email"
+                }
                 onChange={(e) =>
                   handleConfigChange("messageType", e.target.value)
                 }
