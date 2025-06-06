@@ -11,7 +11,7 @@ export interface FlowStep {
   stepType: string;
   customName: string;
   order: number;
-  config: Record<string, string | number | boolean>;
+  config: Record<string, string | number | boolean | string[]>;
   id: string; // Unique identifier for drag-and-drop
 }
 

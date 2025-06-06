@@ -7,10 +7,6 @@ import {
   ValidationError,
 } from "../../types/hiring-flow";
 import { HiringFlowValidator } from "../../utils/hiring-flow-validation";
-import {
-  getStepMetadata,
-  STEP_METADATA,
-} from "../../data/hiring-flow-metadata";
 import StepCard from "./StepCard";
 
 interface FlowCanvasProps {
@@ -19,6 +15,7 @@ interface FlowCanvasProps {
   onDeleteStep: (stepId: string) => void;
   onStepClick: (step: FlowStep) => void;
   validationErrors: ValidationError[];
+  getStepMetadata: (stepType: string) => StepMetadata | undefined;
 }
 
 const FlowCanvas: React.FC<FlowCanvasProps> = ({
@@ -27,6 +24,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
   onDeleteStep,
   onStepClick,
   validationErrors,
+  getStepMetadata,
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
 
@@ -43,7 +41,13 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
             return;
           } else {
             // New step from palette
-            if (HiringFlowValidator.canAddStep(steps, item.stepType)) {
+            if (
+              HiringFlowValidator.canAddStep(
+                steps,
+                item.stepType,
+                getStepMetadata
+              )
+            ) {
               onAddStep(item.stepType, item.metadata);
             }
           }
@@ -53,14 +57,18 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
         if ("flowStep" in item) {
           return true; // Allow reordering existing steps
         }
-        return HiringFlowValidator.canAddStep(steps, item.stepType);
+        return HiringFlowValidator.canAddStep(
+          steps,
+          item.stepType,
+          getStepMetadata
+        );
       },
       collect: (monitor) => ({
         isOver: monitor.isOver(),
         canDrop: monitor.canDrop(),
       }),
     }),
-    [steps, onAddStep]
+    [steps, onAddStep, getStepMetadata]
   );
 
   // Connect the drop ref
@@ -78,7 +86,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
   const getCanvasClasses = () => {
     let classes =
-      "min-h-[500px] p-6 border-2 border-dashed rounded-lg transition-all duration-200  border-2 border-red-500";
+      "min-h-[500px] p-6 border-2 border-dashed rounded-lg transition-all duration-200 ";
 
     if (isOver && canDrop) {
       classes += "border-brand-400 bg-brand-25 dark:bg-brand-950 ";
@@ -124,9 +132,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
                   Flexible Steps:{" "}
                   {
                     steps.filter((step) => {
-                      const meta = STEP_METADATA.find(
-                        (m) => m.stepType === step.stepType
-                      );
+                      const meta = getStepMetadata(step.stepType);
                       return meta?.positionFlexible;
                     }).length
                   }
@@ -181,6 +187,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
                           onClick={() => onStepClick(step)}
                           onDelete={() => onDeleteStep(step.id)}
                           hasConfigError={hasErrors}
+                          getStepMetadata={getStepMetadata}
                         />
                       )}
 

@@ -8,7 +8,7 @@ import {
   ValidationError,
 } from "../types/hiring-flow";
 import { HiringFlowValidator } from "../utils/hiring-flow-validation";
-import { getStepMetadata } from "../data/hiring-flow-metadata";
+import { useStepMetadata } from "../hooks/useStepMetadata";
 import StepPalette from "../components/hiring-flow/StepPalette";
 import FlowCanvas from "../components/hiring-flow/FlowCanvas";
 import FlowToolbar from "../components/hiring-flow/FlowToolbar";
@@ -16,6 +16,8 @@ import StepConfigPanel from "../components/hiring-flow/StepConfigPanel";
 import PageMeta from "../components/common/PageMeta";
 
 const HiringFlowBuilder: React.FC = () => {
+  const { getStepMetadata, loading: metadataLoading } = useStepMetadata();
+
   const [flow, setFlow] = useState<HiringFlow>({
     flowName: "New Hiring Flow",
     description: "A custom hiring flow for your organization",
@@ -35,13 +37,16 @@ const HiringFlowBuilder: React.FC = () => {
   // Add a new step to the flow
   const handleAddStep = useCallback(
     (stepType: string, metadata: StepMetadata) => {
-      if (!HiringFlowValidator.canAddStep(flow.steps, stepType)) {
+      if (
+        !HiringFlowValidator.canAddStep(flow.steps, stepType, getStepMetadata)
+      ) {
         return;
       }
 
       const suggestedOrder = HiringFlowValidator.suggestOrder(
         flow.steps,
-        stepType
+        stepType,
+        getStepMetadata
       );
       const newStep: FlowStep = {
         id: generateStepId(),
@@ -61,9 +66,11 @@ const HiringFlowBuilder: React.FC = () => {
         ...flow,
         steps: [...flow.steps, newStep],
       };
-      setValidationErrors(HiringFlowValidator.validateFlow(updatedFlow));
+      setValidationErrors(
+        HiringFlowValidator.validateFlow(updatedFlow, getStepMetadata)
+      );
     },
-    [flow.steps]
+    [flow.steps, getStepMetadata]
   );
 
   // Update an existing step
@@ -83,10 +90,12 @@ const HiringFlowBuilder: React.FC = () => {
           step.id === stepId ? updatedStep : step
         ),
       };
-      setValidationErrors(HiringFlowValidator.validateFlow(updatedFlow));
+      setValidationErrors(
+        HiringFlowValidator.validateFlow(updatedFlow, getStepMetadata)
+      );
       setSelectedStep(null);
     },
-    [flow]
+    [flow, getStepMetadata]
   );
 
   // Delete a step from the flow
@@ -102,28 +111,33 @@ const HiringFlowBuilder: React.FC = () => {
         ...flow,
         steps: flow.steps.filter((step) => step.id !== stepId),
       };
-      setValidationErrors(HiringFlowValidator.validateFlow(updatedFlow));
+      setValidationErrors(
+        HiringFlowValidator.validateFlow(updatedFlow, getStepMetadata)
+      );
 
       // Close config panel if the deleted step was selected
       if (selectedStep?.id === stepId) {
         setSelectedStep(null);
       }
     },
-    [flow, selectedStep]
+    [flow, selectedStep, getStepMetadata]
   );
 
   // Handle step click for configuration
-  const handleStepClick = useCallback((step: FlowStep) => {
-    const metadata = getStepMetadata(step.stepType);
-    // Only open config panel for steps that have configuration options
-    if (metadata && metadata.configFlag) {
-      setSelectedStep(step);
-    }
-  }, []);
+  const handleStepClick = useCallback(
+    (step: FlowStep) => {
+      const metadata = getStepMetadata(step.stepType);
+      // Only open config panel for steps that have configuration options
+      if (metadata && metadata.configFlag) {
+        setSelectedStep(step);
+      }
+    },
+    [getStepMetadata]
+  );
 
   // Validate the entire flow
   const handleValidate = useCallback(() => {
-    const errors = HiringFlowValidator.validateFlow(flow);
+    const errors = HiringFlowValidator.validateFlow(flow, getStepMetadata);
     setValidationErrors(errors);
 
     // Show validation result
@@ -134,7 +148,7 @@ const HiringFlowBuilder: React.FC = () => {
         `❌ Flow validation failed with ${errors.length} error(s). Check the details below.`
       );
     }
-  }, [flow]);
+  }, [flow, getStepMetadata]);
 
   // Save the flow
   const handleSave = useCallback((updatedFlow: HiringFlow) => {
@@ -178,6 +192,29 @@ const HiringFlowBuilder: React.FC = () => {
     linkElement.click();
   }, [flow]);
 
+  // Show loading state while metadata is being fetched
+  if (metadataLoading) {
+    return (
+      <>
+        <PageMeta
+          title="Hiring Flow Builder | TailAdmin - React.js Admin Dashboard Template"
+          description="Build and configure custom hiring flows with drag-and-drop interface"
+        />
+        <div className="h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-500 mx-auto mb-4"></div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Loading Hiring Flow Builder
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400">
+              Fetching step definitions from backend...
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <PageMeta
@@ -211,6 +248,7 @@ const HiringFlowBuilder: React.FC = () => {
               onDeleteStep={handleDeleteStep}
               onStepClick={handleStepClick}
               validationErrors={validationErrors}
+              getStepMetadata={getStepMetadata}
             />
           </div>
 

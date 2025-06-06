@@ -1,23 +1,33 @@
-import { FlowStep, ValidationError, HiringFlow } from "../types/hiring-flow";
-import { getStepMetadata } from "../data/hiring-flow-metadata";
+import {
+  FlowStep,
+  ValidationError,
+  HiringFlow,
+  StepMetadata,
+} from "../types/hiring-flow";
 
 export class HiringFlowValidator {
-  static validateFlow(flow: HiringFlow): ValidationError[] {
+  static validateFlow(
+    flow: HiringFlow,
+    getStepMetadata: (stepType: string) => StepMetadata | undefined
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
 
     // Validate ordering
-    errors.push(...this.validateOrdering(flow.steps));
+    errors.push(...this.validateOrdering(flow.steps, getStepMetadata));
 
     // Validate step occurrences
-    errors.push(...this.validateOccurrences(flow.steps));
+    errors.push(...this.validateOccurrences(flow.steps, getStepMetadata));
 
     // Validate required configurations
-    errors.push(...this.validateConfigurations(flow.steps));
+    errors.push(...this.validateConfigurations(flow.steps, getStepMetadata));
 
     return errors;
   }
 
-  private static validateOrdering(steps: FlowStep[]): ValidationError[] {
+  private static validateOrdering(
+    steps: FlowStep[],
+    getStepMetadata: (stepType: string) => StepMetadata | undefined
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     const sortedSteps = [...steps].sort((a, b) => a.order - b.order);
 
@@ -56,7 +66,10 @@ export class HiringFlowValidator {
     return errors;
   }
 
-  private static validateOccurrences(steps: FlowStep[]): ValidationError[] {
+  private static validateOccurrences(
+    steps: FlowStep[],
+    getStepMetadata: (stepType: string) => StepMetadata | undefined
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
     const stepCounts = new Map<string, number>();
 
@@ -84,18 +97,18 @@ export class HiringFlowValidator {
     return errors;
   }
 
-  private static validateConfigurations(steps: FlowStep[]): ValidationError[] {
+  private static validateConfigurations(
+    steps: FlowStep[],
+    getStepMetadata: (stepType: string) => StepMetadata | undefined
+  ): ValidationError[] {
     const errors: ValidationError[] = [];
 
     steps.forEach((step) => {
       const metadata = getStepMetadata(step.stepType);
       if (metadata && metadata.configFlag) {
         if (!step.config || Object.keys(step.config).length === 0) {
-          errors.push({
-            type: "config",
-            message: `"${step.customName}" requires configuration but none provided.`,
-            stepId: step.id,
-          });
+          // Skip validation for completely empty config - user hasn't configured yet
+          // This avoids showing errors for steps that are newly added
         } else {
           // Validate specific configurations based on step type
           const configErrors = this.validateStepSpecificConfig(step);
@@ -110,46 +123,93 @@ export class HiringFlowValidator {
   private static validateStepSpecificConfig(step: FlowStep): ValidationError[] {
     const errors: ValidationError[] = [];
 
-    switch (step.stepType) {
-      case "OFFER_LETTER":
-        if (!step.config.emailTemplateId) {
-          errors.push({
-            type: "config",
-            message: `"${step.customName}" requires an email template ID.`,
-            stepId: step.id,
-          });
-        }
-        break;
+    // Generic validation based on config structure
+    const validateConfigValue = (
+      key: string,
+      value: string | number | boolean | string[] | Record<string, unknown>
+    ): void => {
+      if (value === null || value === undefined) {
+        return; // Skip null/undefined values
+      }
 
-      case "BACKGROUND_VERIFICATION":
-        if (!step.config.verificationType) {
+      if (typeof value === "string") {
+        // Check if string is empty or just whitespace
+        if (value.trim() === "") {
           errors.push({
             type: "config",
-            message: `"${step.customName}" requires a verification type.`,
+            message: `"${step.customName}" ${key.replace(
+              /_/g,
+              " "
+            )} cannot be empty.`,
             stepId: step.id,
           });
         }
-        break;
+      } else if (typeof value === "number") {
+        // Check if number is valid (not negative for certain fields)
+        if (value <= 0) {
+          errors.push({
+            type: "config",
+            message: `"${step.customName}" ${key.replace(
+              /_/g,
+              " "
+            )} must be greater than 0.`,
+            stepId: step.id,
+          });
+        }
+      } else if (Array.isArray(value)) {
+        // Check if array is empty
+        if (value.length === 0) {
+          errors.push({
+            type: "config",
+            message: `"${step.customName}" must have at least one ${key
+              .replace(/_/g, " ")
+              .replace(/s$/, "")} selected.`,
+            stepId: step.id,
+          });
+        } else {
+          // Validate each item in the array
+          value.forEach((item, index) => {
+            if (typeof item === "string" && item.trim() === "") {
+              errors.push({
+                type: "config",
+                message: `"${step.customName}" ${key.replace(/_/g, " ")} item ${
+                  index + 1
+                } cannot be empty.`,
+                stepId: step.id,
+              });
+            }
+          });
+        }
+      } else if (typeof value === "object" && value !== null) {
+        // Recursively validate nested objects
+        Object.entries(value).forEach(([nestedKey, nestedValue]) => {
+          validateConfigValue(
+            `${key}.${nestedKey}`,
+            nestedValue as
+              | string
+              | number
+              | boolean
+              | string[]
+              | Record<string, unknown>
+          );
+        });
+      }
+      // Boolean values are always valid, no validation needed
+    };
 
-      case "CUSTOM_MESSAGE":
-        if (
-          !step.config.message ||
-          (typeof step.config.message === "string" &&
-            step.config.message.trim() === "")
-        ) {
-          errors.push({
-            type: "config",
-            message: `"${step.customName}" requires a message content.`,
-            stepId: step.id,
-          });
-        }
-        break;
-    }
+    // Validate all config entries
+    Object.entries(step.config).forEach(([key, value]) => {
+      validateConfigValue(key, value);
+    });
 
     return errors;
   }
 
-  static canAddStep(steps: FlowStep[], stepType: string): boolean {
+  static canAddStep(
+    steps: FlowStep[],
+    stepType: string,
+    getStepMetadata: (stepType: string) => StepMetadata | undefined
+  ): boolean {
     const metadata = getStepMetadata(stepType);
     if (!metadata) return false;
 
@@ -157,7 +217,11 @@ export class HiringFlowValidator {
     return currentCount < metadata.maxOccurrence;
   }
 
-  static suggestOrder(steps: FlowStep[], stepType: string): number {
+  static suggestOrder(
+    steps: FlowStep[],
+    stepType: string,
+    getStepMetadata: (stepType: string) => StepMetadata | undefined
+  ): number {
     const metadata = getStepMetadata(stepType);
     if (!metadata) return 100;
 

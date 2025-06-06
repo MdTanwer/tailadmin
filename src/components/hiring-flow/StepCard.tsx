@@ -11,6 +11,7 @@ interface StepCardProps {
   onClick?: () => void;
   onDelete?: () => void;
   hasConfigError?: boolean;
+  getStepMetadata?: (stepType: string) => StepMetadata | undefined;
 }
 
 const StepCard: React.FC<StepCardProps> = ({
@@ -21,11 +22,19 @@ const StepCard: React.FC<StepCardProps> = ({
   onClick,
   onDelete,
   hasConfigError = false,
+  getStepMetadata,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
+
+  // For non-flow cards, check if we can add this step type
   const canAdd =
-    !isInFlow &&
-    HiringFlowValidator.canAddStep(existingSteps, metadata.stepType);
+    !isInFlow && getStepMetadata
+      ? HiringFlowValidator.canAddStep(
+          existingSteps,
+          metadata.stepType,
+          getStepMetadata
+        )
+      : !isInFlow; // Fallback to true for non-flow cards if no getStepMetadata provided
 
   const [{ isDragging }, drag] = useDrag(
     () => ({
@@ -56,19 +65,22 @@ const StepCard: React.FC<StepCardProps> = ({
       CREATE_JOB_POST: "📝",
       UPLOAD_CV: "📄",
       SEND_JD_TO_CANDIDATE: "📧",
+      SEND_JD: "📧", // Backend uses SEND_JD instead of SEND_JD_TO_CANDIDATE
       SCREENING_CALL: "📞",
       INTERVIEW: "👥",
       POST_INTERVIEW_ASSIGNMENT: "📋",
       OFFER_LETTER: "💼",
       BACKGROUND_VERIFICATION: "🔍",
       CUSTOM_MESSAGE: "💬",
+      CUSTOMER_MESSAGE: "💬", // Backend uses CUSTOMER_MESSAGE
+      ONBOARDING: "🎉", // New step from backend
     };
     return iconMap[stepType] || "📌";
   };
 
   const getCardClasses = () => {
     let baseClasses =
-      "relative p-4 rounded-lg border-2 cursor-pointer transition-all duration-200 ";
+      "relative p-3 rounded-lg border-2 cursor-pointer transition-all duration-200 ";
 
     if (isDragging) {
       baseClasses += "opacity-50 ";
@@ -109,7 +121,7 @@ const StepCard: React.FC<StepCardProps> = ({
     <div ref={cardRef} className={getCardClasses()} onClick={handleClick}>
       {/* Step Icon and Name */}
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-2xl">{getStepIcon(metadata.stepType)}</span>
+        <span className="text-xl">{getStepIcon(metadata.stepType)}</span>
         <div className="flex-1">
           <h4 className="font-medium text-gray-900 dark:text-white text-sm">
             {isInFlow && flowStep ? flowStep.customName : metadata.displayName}
