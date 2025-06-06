@@ -85,35 +85,6 @@ const StepPalette: React.FC<StepPaletteProps> = ({ existingSteps }) => {
               </div>
             </div>
           </div>
-
-          {/* Usage Statistics */}
-          <div className="p-4 bg-brand-50 dark:bg-brand-950 rounded-lg">
-            <h4 className="text-sm font-medium text-brand-700 dark:text-brand-300 mb-2">
-              Flow Statistics
-            </h4>
-            <div className="text-xs text-brand-600 dark:text-brand-400 space-y-1">
-              <div>Total Steps: {existingSteps.length}</div>
-              <div>
-                Configured Steps:{" "}
-                {
-                  existingSteps.filter(
-                    (step) => Object.keys(step.config).length > 0
-                  ).length
-                }
-              </div>
-              <div>
-                Flexible Steps:{" "}
-                {
-                  existingSteps.filter((step) => {
-                    const meta = STEP_METADATA.find(
-                      (m) => m.stepType === step.stepType
-                    );
-                    return meta?.positionFlexible;
-                  }).length
-                }
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

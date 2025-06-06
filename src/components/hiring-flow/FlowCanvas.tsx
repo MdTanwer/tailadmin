@@ -7,7 +7,10 @@ import {
   ValidationError,
 } from "../../types/hiring-flow";
 import { HiringFlowValidator } from "../../utils/hiring-flow-validation";
-import { getStepMetadata } from "../../data/hiring-flow-metadata";
+import {
+  getStepMetadata,
+  STEP_METADATA,
+} from "../../data/hiring-flow-metadata";
 import StepCard from "./StepCard";
 
 interface FlowCanvasProps {
@@ -75,7 +78,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
   const getCanvasClasses = () => {
     let classes =
-      "min-h-[500px] p-6 border-2 border-dashed rounded-lg transition-all duration-200 ";
+      "min-h-[500px] p-6 border-2 border-dashed rounded-lg transition-all duration-200  border-2 border-red-500";
 
     if (isOver && canDrop) {
       classes += "border-brand-400 bg-brand-25 dark:bg-brand-950 ";
@@ -91,13 +94,47 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          Flow Canvas
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Drag steps from the left panel to build your hiring flow
-        </p>
+      <div className="  px-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex justify-between">
+          <div className="p-6">
+            {" "}
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Flow Canvas
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Drag steps from the left panel to build your hiring flow
+            </p>
+          </div>
+          <div>
+            {" "}
+            <div className="p-4 bg-brand-50 dark:bg-brand-950 rounded-lg">
+              <h4 className="text-sm font-medium text-brand-700 dark:text-brand-300 mb-2">
+                Flow Statistics
+              </h4>
+              <div className="text-xs text-brand-600 dark:text-brand-400 space-y-1">
+                <div>Total Steps: {steps.length}</div>
+                <div>
+                  Configured Steps:{" "}
+                  {
+                    steps.filter((step) => Object.keys(step.config).length > 0)
+                      .length
+                  }
+                </div>
+                <div>
+                  Flexible Steps:{" "}
+                  {
+                    steps.filter((step) => {
+                      const meta = STEP_METADATA.find(
+                        (m) => m.stepType === step.stepType
+                      );
+                      return meta?.positionFlexible;
+                    }).length
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6">
@@ -123,7 +160,7 @@ const FlowCanvas: React.FC<FlowCanvasProps> = ({
                 const hasErrors = stepErrors.length > 0;
 
                 return (
-                  <div key={step.id} className="relative">
+                  <div key={step.id} className="relative  w-90  mx-auto ">
                     {/* Step Number */}
                     <div className="flex items-center mb-2">
                       <div className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-500 text-white text-sm font-medium mr-3">

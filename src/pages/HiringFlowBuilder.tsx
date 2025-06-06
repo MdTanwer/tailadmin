@@ -114,7 +114,11 @@ const HiringFlowBuilder: React.FC = () => {
 
   // Handle step click for configuration
   const handleStepClick = useCallback((step: FlowStep) => {
-    setSelectedStep(step);
+    const metadata = getStepMetadata(step.stepType);
+    // Only open config panel for steps that have configuration options
+    if (metadata && metadata.configFlag) {
+      setSelectedStep(step);
+    }
   }, []);
 
   // Validate the entire flow
