@@ -28,6 +28,7 @@ const HiringFlowBuilder: React.FC = () => {
     []
   );
   const [selectedStep, setSelectedStep] = useState<FlowStep | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Generate unique ID for new steps
   const generateStepId = () => {
@@ -151,12 +152,64 @@ const HiringFlowBuilder: React.FC = () => {
   }, [flow, getStepMetadata]);
 
   // Save the flow
-  const handleSave = useCallback((updatedFlow: HiringFlow) => {
-    setFlow(updatedFlow);
+  const handleSave = useCallback(async (updatedFlow: HiringFlow) => {
+    setIsSaving(true);
 
-    // In a real application, you would save to a backend here
-    console.log("Saving flow:", updatedFlow);
-    alert("✅ Flow saved successfully!");
+    try {
+      // Update local state first
+      setFlow(updatedFlow);
+
+      // Prepare the data for the API in the expected format
+      const flowData = {
+        hiring_user_template_id: 3, // You might want to make this dynamic based on your needs
+        company_id: 1, // You might want to make this dynamic based on logged in user
+        template_name: updatedFlow.flowName,
+        template_json: {
+          steps: updatedFlow.steps.map((step) => ({
+            id: step.id,
+            order: step.order,
+            config: step.config,
+            stepType: step.stepType,
+            customName: step.customName,
+          })),
+          flowName: updatedFlow.flowName,
+          description: updatedFlow.description,
+        },
+        is_active: true,
+        created_by: 1,
+      };
+
+      // Make API call to save the flow
+      const response = await fetch(
+        "https://abhirebackend.onrender.com/hiringflow/template/save",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(flowData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to save flow: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("Flow saved successfully:", result);
+      alert("✅ Flow saved successfully!");
+    } catch (error) {
+      console.error("Error saving flow:", error);
+      alert(
+        `❌ Failed to save flow: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
+    } finally {
+      setIsSaving(false);
+    }
   }, []);
 
   // Reset the flow
@@ -233,6 +286,7 @@ const HiringFlowBuilder: React.FC = () => {
               onReset={handleReset}
               onValidate={handleValidate}
               onExport={handleExport}
+              isSaving={isSaving}
             />
           </div>
 

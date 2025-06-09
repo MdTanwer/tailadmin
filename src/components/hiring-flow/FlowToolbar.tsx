@@ -8,6 +8,7 @@ interface FlowToolbarProps {
   onReset: () => void;
   onValidate: () => void;
   onExport: () => void;
+  isSaving?: boolean;
 }
 
 const FlowToolbar: React.FC<FlowToolbarProps> = ({
@@ -17,6 +18,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
   onReset,
   onValidate,
   onExport,
+  isSaving = false,
 }) => {
   const [flowName, setFlowName] = useState(flow.flowName);
   const [description, setDescription] = useState(flow.description);
@@ -143,10 +145,13 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 
             <button
               onClick={handleSave}
-              disabled={hasErrors || !hasSteps}
-              className="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={hasErrors || !hasSteps || isSaving}
+              className="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              Save Flow
+              {isSaving && (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              )}
+              {isSaving ? "Saving..." : "Save Flow"}
             </button>
           </div>
         </div>

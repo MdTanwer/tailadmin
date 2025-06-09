@@ -9,6 +9,9 @@ export const STEP_METADATA: StepMetadata[] = [
     defaultOrder: 10,
     positionFlexible: false,
   },
+
+
+  
   {
     stepType: "UPLOAD_CV",
     displayName: "Upload CV",
