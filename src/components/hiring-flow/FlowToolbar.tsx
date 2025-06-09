@@ -1,5 +1,22 @@
 import React, { useState } from "react";
-import { HiringFlow, ValidationError } from "../../types/hiring-flow";
+import { HiringFlow, ValidationError, FlowStep } from "../../types/hiring-flow";
+
+// Interface for template data
+interface TemplateData {
+  hiring_user_template_id: number;
+  company_id: number;
+  template_name: string;
+  template_json: {
+    steps: FlowStep[];
+    flowName: string;
+    description: string;
+  };
+  is_active: boolean;
+  created_by: number;
+  created_on: string;
+  updated_by: number | null;
+  updated_on: string;
+}
 
 interface FlowToolbarProps {
   flow: HiringFlow;
@@ -9,6 +26,12 @@ interface FlowToolbarProps {
   onValidate: () => void;
   onExport: () => void;
   isSaving?: boolean;
+  templates?: TemplateData[];
+  selectedTemplate?: TemplateData | null;
+  loadingTemplates?: boolean;
+  isEditMode?: boolean;
+  onTemplateSelect?: (template: TemplateData) => void;
+  onCreateNew?: () => void;
 }
 
 const FlowToolbar: React.FC<FlowToolbarProps> = ({
@@ -19,10 +42,23 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
   onValidate,
   onExport,
   isSaving = false,
+  templates = [],
+  selectedTemplate = null,
+  loadingTemplates = false,
+  isEditMode = false,
+  onTemplateSelect,
+  onCreateNew,
 }) => {
   const [flowName, setFlowName] = useState(flow.flowName);
   const [description, setDescription] = useState(flow.description);
   const [showFlowDetails, setShowFlowDetails] = useState(false);
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+
+  // Update local state when flow changes
+  React.useEffect(() => {
+    setFlowName(flow.flowName);
+    setDescription(flow.description);
+  }, [flow.flowName, flow.description]);
 
   const handleSave = () => {
     const updatedFlow: HiringFlow = {
@@ -31,6 +67,20 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
       description,
     };
     onSave(updatedFlow);
+  };
+
+  const handleTemplateSelect = (template: TemplateData) => {
+    if (onTemplateSelect) {
+      onTemplateSelect(template);
+    }
+    setShowTemplateDropdown(false);
+  };
+
+  const handleCreateNew = () => {
+    if (onCreateNew) {
+      onCreateNew();
+    }
+    setShowTemplateDropdown(false);
   };
 
   const hasErrors = validationErrors.length > 0;
@@ -47,6 +97,11 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {flowName || "Untitled Flow"} • {flow.steps.length} steps
+              {isEditMode && selectedTemplate && (
+                <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 rounded-md">
+                  Editing: {selectedTemplate.template_name}
+                </span>
+              )}
             </p>
           </div>
 
@@ -120,6 +175,87 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Template Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowTemplateDropdown(!showTemplateDropdown)}
+                disabled={loadingTemplates}
+                className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {loadingTemplates ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
+                ) : (
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 9l-7 7-7-7"
+                    />
+                  </svg>
+                )}
+                Templates
+              </button>
+
+              {showTemplateDropdown && (
+                <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                  {/* Create New Option */}
+                  <button
+                    onClick={handleCreateNew}
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2"
+                  >
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Create New Template
+                  </button>
+
+                  {/* Template List */}
+                  {templates.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                      No templates available
+                    </div>
+                  ) : (
+                    templates.map((template) => (
+                      <button
+                        key={template.hiring_user_template_id}
+                        onClick={() => handleTemplateSelect(template)}
+                        className={`w-full text-left px-4 py-3 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 border-b border-gray-200 dark:border-gray-700 last:border-b-0 ${
+                          selectedTemplate?.hiring_user_template_id ===
+                          template.hiring_user_template_id
+                            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300"
+                            : "text-gray-700 dark:text-gray-300"
+                        }`}
+                      >
+                        <div className="font-medium">
+                          {template.template_name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {template.template_json?.steps?.length || 0} steps •
+                          {new Date(template.updated_on).toLocaleDateString()}
+                        </div>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
             <button
               onClick={onValidate}
               className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
@@ -151,11 +287,25 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
               {isSaving && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               )}
-              {isSaving ? "Saving..." : "Save Flow"}
+              {isSaving
+                ? isEditMode
+                  ? "Updating..."
+                  : "Saving..."
+                : isEditMode
+                ? "Update Template"
+                : "Save Flow"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Close dropdown when clicking outside */}
+      {showTemplateDropdown && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowTemplateDropdown(false)}
+        />
+      )}
 
       {/* Flow Details Panel */}
       {showFlowDetails && (
