@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { StepMetadata } from "../types/hiring-flow";
+import { apiGet } from "../utils/api";
 
 interface BackendStep {
   hiringflow_steps_master_id: number;
@@ -22,7 +23,7 @@ export const useStepMetadata = () => {
     const fetchSteps = async () => {
       try {
         setLoading(true);
-        const response = await fetch(
+        const response = await apiGet(
           "https://abhirebackend.onrender.com/hiringflow/steps"
         );
 

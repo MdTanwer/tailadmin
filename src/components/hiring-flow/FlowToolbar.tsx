@@ -40,7 +40,7 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
   onSave,
   onReset,
   onValidate,
-  onExport,
+
   isSaving = false,
   templates = [],
   selectedTemplate = null,
@@ -51,20 +51,43 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 }) => {
   const [flowName, setFlowName] = useState(flow.flowName);
   const [description, setDescription] = useState(flow.description);
-  const [showFlowDetails, setShowFlowDetails] = useState(false);
+  const [showFlowDetails, setShowFlowDetails] = useState(true);
   const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    flowName: boolean;
+    description: boolean;
+  }>({
+    flowName: false,
+    description: false,
+  });
 
   // Update local state when flow changes
   React.useEffect(() => {
     setFlowName(flow.flowName);
     setDescription(flow.description);
+    // Reset field errors when flow changes
+    setFieldErrors({ flowName: false, description: false });
   }, [flow.flowName, flow.description]);
 
+  // Validate required fields
+  const validateRequiredFields = () => {
+    const errors = {
+      flowName: !flowName.trim(),
+      description: !description.trim(),
+    };
+    setFieldErrors(errors);
+    return !errors.flowName && !errors.description;
+  };
+
   const handleSave = () => {
+    if (!validateRequiredFields()) {
+      return;
+    }
+
     const updatedFlow: HiringFlow = {
       ...flow,
-      flowName,
-      description,
+      flowName: flowName.trim(),
+      description: description.trim(),
     };
     onSave(updatedFlow);
   };
@@ -85,6 +108,10 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 
   const hasErrors = validationErrors.length > 0;
   const hasSteps = flow.steps.length > 0;
+  const hasRequiredFieldErrors =
+    fieldErrors.flowName || fieldErrors.description;
+  const isFlowNameEmpty = !flowName.trim();
+  const isDescriptionEmpty = !description.trim();
 
   return (
     <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4">
@@ -263,13 +290,13 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
               Validate
             </button>
 
-            <button
+            {/* <button
               onClick={onExport}
               disabled={!hasSteps}
               className="px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Export JSON
-            </button>
+            </button> */}
 
             <button
               onClick={onReset}
@@ -281,8 +308,23 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
 
             <button
               onClick={handleSave}
-              disabled={hasErrors || !hasSteps || isSaving}
+              disabled={
+                hasErrors ||
+                !hasSteps ||
+                isSaving ||
+                isFlowNameEmpty ||
+                isDescriptionEmpty
+              }
               className="px-4 py-2 text-sm font-medium text-white bg-brand-500 hover:bg-brand-600 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              title={
+                isFlowNameEmpty || isDescriptionEmpty
+                  ? "Flow name and description are required"
+                  : hasErrors
+                  ? "Fix validation errors before saving"
+                  : !hasSteps
+                  ? "Add at least one step before saving"
+                  : ""
+              }
             >
               {isSaving && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -313,29 +355,91 @@ const FlowToolbar: React.FC<FlowToolbarProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Flow Name
+                Flow Name <span className="text-error-500">*</span>
               </label>
               <input
                 type="text"
                 value={flowName}
-                onChange={(e) => setFlowName(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-gray-800 dark:text-white"
+                onChange={(e) => {
+                  setFlowName(e.target.value);
+                  if (fieldErrors.flowName) {
+                    setFieldErrors((prev) => ({ ...prev, flowName: false }));
+                  }
+                }}
+                onBlur={() => {
+                  if (!flowName.trim()) {
+                    setFieldErrors((prev) => ({ ...prev, flowName: true }));
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-white ${
+                  fieldErrors.flowName
+                    ? "border-error-300 dark:border-error-600 focus:ring-error-500"
+                    : "border-gray-300 dark:border-gray-600 focus:ring-brand-500"
+                }`}
                 placeholder="Enter flow name..."
+                required
               />
+              {fieldErrors.flowName && (
+                <p className="mt-1 text-sm text-error-600 dark:text-error-400">
+                  Flow name is required
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Description
+                Description <span className="text-error-500">*</span>
               </label>
               <input
                 type="text"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-500 dark:bg-gray-800 dark:text-white"
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (fieldErrors.description) {
+                    setFieldErrors((prev) => ({ ...prev, description: false }));
+                  }
+                }}
+                onBlur={() => {
+                  if (!description.trim()) {
+                    setFieldErrors((prev) => ({ ...prev, description: true }));
+                  }
+                }}
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 dark:bg-gray-800 dark:text-white ${
+                  fieldErrors.description
+                    ? "border-error-300 dark:border-error-600 focus:ring-error-500"
+                    : "border-gray-300 dark:border-gray-600 focus:ring-brand-500"
+                }`}
                 placeholder="Enter description..."
+                required
               />
+              {fieldErrors.description && (
+                <p className="mt-1 text-sm text-error-600 dark:text-error-400">
+                  Description is required
+                </p>
+              )}
             </div>
           </div>
+          {hasRequiredFieldErrors && (
+            <div className="mt-3 p-3 bg-error-50 dark:bg-error-950 border border-error-200 dark:border-error-800 rounded-md">
+              <div className="flex items-center">
+                <svg
+                  className="w-4 h-4 text-error-500 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+                <span className="text-sm text-error-700 dark:text-error-300">
+                  Please fill in all required fields before saving.
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

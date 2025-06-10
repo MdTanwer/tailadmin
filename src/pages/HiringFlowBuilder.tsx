@@ -9,6 +9,7 @@ import {
 } from "../types/hiring-flow";
 import { HiringFlowValidator } from "../utils/hiring-flow-validation";
 import { useStepMetadata } from "../hooks/useStepMetadata";
+import { apiGet, apiPost, apiPut } from "../utils/api";
 import StepPalette from "../components/hiring-flow/StepPalette";
 import FlowCanvas from "../components/hiring-flow/FlowCanvas";
 import FlowToolbar from "../components/hiring-flow/FlowToolbar";
@@ -36,8 +37,8 @@ const HiringFlowBuilder: React.FC = () => {
   const { getStepMetadata, loading: metadataLoading } = useStepMetadata();
 
   const [flow, setFlow] = useState<HiringFlow>({
-    flowName: "New Hiring Flow",
-    description: "A custom hiring flow for your organization",
+    flowName: "",
+    description: "",
     steps: [],
   });
 
@@ -62,7 +63,7 @@ const HiringFlowBuilder: React.FC = () => {
   const loadTemplates = async () => {
     setLoadingTemplates(true);
     try {
-      const response = await fetch(
+      const response = await apiGet(
         "https://abhirebackend.onrender.com/hiringflow/templates?company_id=1"
       );
       if (!response.ok) {
@@ -106,8 +107,8 @@ const HiringFlowBuilder: React.FC = () => {
     setSelectedTemplate(null);
     setIsEditMode(false);
     setFlow({
-      flowName: "New Hiring Flow",
-      description: "A custom hiring flow for your organization",
+      flowName: "",
+      description: "",
       steps: [],
     });
     setValidationErrors([]);
@@ -267,15 +268,9 @@ const HiringFlowBuilder: React.FC = () => {
           };
 
           // Make API call to update the template
-          const response = await fetch(
+          const response = await apiPut(
             `https://abhirebackend.onrender.com/hiringflow/template/${selectedTemplate.hiring_user_template_id}`,
-            {
-              method: "PUT",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(updateData),
-            }
+            updateData
           );
 
           if (!response.ok) {
@@ -312,15 +307,9 @@ const HiringFlowBuilder: React.FC = () => {
           };
 
           // Make API call to save the flow
-          const response = await fetch(
+          const response = await apiPost(
             "https://abhirebackend.onrender.com/hiringflow/template/save",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(flowData),
-            }
+            flowData
           );
 
           if (!response.ok) {
@@ -358,8 +347,8 @@ const HiringFlowBuilder: React.FC = () => {
       )
     ) {
       setFlow({
-        flowName: "New Hiring Flow",
-        description: "A custom hiring flow for your organization",
+        flowName: "",
+        description: "",
         steps: [],
       });
       setValidationErrors([]);
